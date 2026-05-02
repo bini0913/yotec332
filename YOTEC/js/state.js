@@ -61,6 +61,11 @@ function buildInitialState() {
         activeMeeting: null,
         aiMode: 'strategy',
         apiSettings: { provider: 'gemini', apiKey: 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk' },
+        userProfile: {
+            id: 'ceo',
+            level: 'advanced',
+            weaknesses: []
+        },
         chatHistory: [
             {
                 id: generateId('msg'),
