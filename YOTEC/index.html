@@ -82,42 +82,10 @@
   <div style="color:var(--text-muted);font-size:0.75rem;" id="splash-status">Loading departments…</div>
 </div>
 
-<!-- Sidebar department quick-access (populated by script) -->
-<script type="module">
-  // Animated splash progress
-  const splashProgress = document.getElementById('splash-progress');
-  const splashStatus   = document.getElementById('splash-status');
-  const status_steps   = ['Loading departments…', 'Activating AI workers…', 'Initializing QA…', 'Starting autonomous agents…', 'ARIA online — ready!'];
-  let prog = 0;
-  const progInterval = setInterval(() => {
-    prog = Math.min(prog + Math.random() * 22 + 5, 100);
-    if (splashProgress) splashProgress.style.width = prog + '%';
-    const step = Math.floor(prog / 20);
-    if (splashStatus && status_steps[step]) splashStatus.textContent = status_steps[step];
-    if (prog >= 100) {
-      clearInterval(progInterval);
-      setTimeout(() => {
-        const splash = document.getElementById('splash');
-        if (splash) { splash.style.opacity = '0'; setTimeout(() => splash.remove(), 650); }
-      }, 350);
-    }
-  }, 80);
-</script>
+<script type="module" src="js/bootstrap/index.js"></script>
 
 <script type="module" src="js/app.js"></script>
 
-<!-- Sidebar dept quick-links (runs after app init) -->
-<script type="module">
-  import { DEPARTMENTS } from './js/data.js';
-  const el = document.getElementById('sidebar-depts');
-  if (el) {
-    el.innerHTML = DEPARTMENTS.map(d => `
-      <div class="nav-item" style="padding:6px 10px;font-size:0.75rem;" onclick="window._yotec?.switchPanel('team')" tabindex="0">
-        <span>${d.icon}</span><span>${d.name}</span>
-      </div>
-    `).join('');
-  }
-</script>
 
 </body>
 </html>

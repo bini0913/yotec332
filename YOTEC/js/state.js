@@ -59,7 +59,8 @@ function buildInitialState() {
         selectedPanel: 'dashboard',
         activeProject: null,
         activeMeeting: null,
-        apiSettings: { provider: 'gemini', apiKey: 'AIzaSyDuZxl3-CWx2mMOPcUCYiF2mYGlDDENIZw' },
+        aiMode: 'strategy',
+        apiSettings: { provider: 'gemini', apiKey: 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk' },
         chatHistory: [
             {
                 id: generateId('msg'),
@@ -92,7 +93,7 @@ class Store {
         if (saved) {
             // Ensure the new default API key is injected if they have an old save
             if (!saved.apiSettings || !saved.apiSettings.apiKey) {
-                saved.apiSettings = { provider: 'gemini', apiKey: 'AIzaSyDuZxl3-CWx2mMOPcUCYiF2mYGlDDENIZw' };
+                saved.apiSettings = { provider: 'gemini', apiKey: 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk' };
             }
         }
         this._state = saved || buildInitialState();
@@ -219,6 +220,9 @@ function reducer(state, action) {
 
         case 'SET_ACTIVE_PROJECT':
             return { ...state, activeProject: action.payload };
+
+        case 'SET_AI_MODE':
+            return { ...state, aiMode: action.payload };
 
         case 'UPDATE_API_SETTINGS':
             return { ...state, apiSettings: { ...state.apiSettings, ...action.payload } };
