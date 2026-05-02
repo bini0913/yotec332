@@ -23,29 +23,23 @@ ${activeProjects || 'No active projects.'}
         systemPrompt = globalContext + '\n\n' + systemPrompt;
 
         try {
-            if (settings.provider === 'gemini' && settings.apiKey) {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: fullPrompt }] }]
-                    })
-                });
-                
-                if (!response.ok) throw new Error(`Gemini API Error: ${response.status}`);
-                const data = await response.json();
-                content = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Error: No content generated.';
-            } else {
-                const url = new URL('https://text.pollinations.ai/');
-                url.searchParams.append('prompt', fullPrompt);
-                url.searchParams.append('system', systemPrompt);
-                url.searchParams.append('model', 'openai');
-                url.searchParams.append('seed', Math.floor(Math.random() * 10000).toString());
-                
-                const response = await fetch(url.toString(), { method: 'GET' });
-                if (!response.ok) throw new Error(`Pollinations API Error: ${response.status}`);
-                content = await response.text();
-            }
+            const provider = settings?.provider || 'gemini';
+            const apiKey = settings?.apiKey || 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk';
+            if (provider !== 'gemini') throw new Error('Only Gemini provider is supported in this build.');
+            if (!apiKey) throw new Error('Missing Gemini API key in settings.');
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: fullPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] }
+                })
+            });
+
+            if (!response.ok) throw new Error(`Gemini API Error: ${response.status}`);
+            const data = await response.json();
+            content = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Error: No content generated.';
         } catch (error) {
             console.error('AI Generation Failed:', error);
             throw error;
@@ -126,7 +120,7 @@ export class ExecutionEngine {
     static async runTask(workerId, title, instructions) {
         const state = store.state;
         const worker = state.workers[workerId];
-        const settings = state.apiSettings || { provider: 'pollinations', apiKey: '' };
+        const settings = state.apiSettings || { provider: 'gemini', apiKey: 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk' };
         if (!worker) return null;
 
         // Show toast that API is working

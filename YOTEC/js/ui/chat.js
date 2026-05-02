@@ -55,6 +55,7 @@ function bubbleHTML(msg) {
 
 export function renderChat(container) {
   const state = store.state;
+  const activeMode = state.aiMode || 'strategy';
   // const messages = state.messages; // This line was not in the original code, but was in the provided diff. Keeping original.
 
   container.innerHTML = `
@@ -66,6 +67,16 @@ export function renderChat(container) {
       <div style="display:flex;gap:8px;">
         <button class="btn btn-secondary btn-sm" id="chat-clear-btn" style="border-color:rgba(255,77,109,0.25);color:var(--accent-red);">🗑️ Clear Memory</button>
         <span class="ea-online-dot"></span>ARIA Online · Energy 98%
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:10px;padding:10px;">
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">AI Mode</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${['tutor', 'developer', 'strategy'].map(mode => `
+          <button class="btn btn-sm mode-chip ${activeMode === mode ? 'btn-primary' : 'btn-secondary'}" data-mode="${mode}">
+            ${mode === 'tutor' ? '🎓 Tutor' : mode === 'developer' ? '💻 Developer' : '📈 Strategy'}
+          </button>
+        `).join('')}
       </div>
     </div>
 
@@ -190,6 +201,13 @@ export function renderChat(container) {
   // Suggestion chips
   container.querySelectorAll('.suggestion-chip').forEach(chip => {
     chip.addEventListener('click', () => { inputEl.value = chip.dataset.msg; sendMessage(); });
+  });
+
+  container.querySelectorAll('.mode-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      store.dispatch({ type: 'SET_AI_MODE', payload: chip.dataset.mode });
+      renderChat(container);
+    });
   });
 
     // Subscribe to new manager-ack messages
