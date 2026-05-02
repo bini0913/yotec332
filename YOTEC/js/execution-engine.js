@@ -57,6 +57,67 @@ ${activeProjects || 'No active projects.'}
         }
         return content.trim();
     }
+
+    static async *generateTextStream(fullPrompt, systemPrompt, settings) {
+        const state = store.state;
+        const recentChat = state.chatHistory.slice(-5).map(m => `${m.fromName}: ${m.content.replace(/\n/g, ' ')}`).join('\n');
+        const activeProjects = state.projects.filter(p => p.status !== 'completed').slice(0, 3).map(p => `- ${p.title} (${p.status})`).join('\n');
+        const globalContext = `
+[GLOBAL COMPANY CONTEXT MEMORY]
+Recent Conversation History:
+${recentChat || 'No recent conversations.'}
+Current Active Projects:
+${activeProjects || 'No active projects.'}
+[END GLOBAL CONTEXT]
+`;
+
+        const mergedSystemPrompt = `${globalContext}\n\n${systemPrompt}`;
+        const provider = settings?.provider || 'gemini';
+        const apiKey = settings?.apiKey || 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk';
+        if (provider !== 'gemini') throw new Error('Only Gemini provider is supported in this build.');
+        if (!apiKey) throw new Error('Missing Gemini API key in settings.');
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: fullPrompt }] }],
+                systemInstruction: { parts: [{ text: mergedSystemPrompt }] }
+            })
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error(`Gemini streaming API Error: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const events = buffer.split('\n\n');
+            buffer = events.pop() || '';
+
+            for (const event of events) {
+                const lines = event.split('\n').filter(line => line.startsWith('data: '));
+                for (const line of lines) {
+                    const payload = line.slice(6).trim();
+                    if (!payload || payload === '[DONE]') continue;
+                    try {
+                        const parsed = JSON.parse(payload);
+                        const chunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (chunk) yield chunk;
+                    } catch (e) {
+                        console.warn('Skipping malformed stream chunk', e);
+                    }
+                }
+            }
+        }
+    }
 }
 
 class OutputGenerator {

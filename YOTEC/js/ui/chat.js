@@ -164,17 +164,42 @@ export function renderChat(container) {
     typingEl.classList.add('visible');
     scrollToBottom();
 
-    // AI processing delay (humanlike)
-    const delay = 1200 + Math.random() * 1200;
-    await new Promise(r => setTimeout(r, delay));
+    let streamBubble = null;
+    const result = await ea.processMessage(text, {
+      onChunk: (partialText, done) => {
+        if (!streamBubble) {
+          const streamMsg = {
+            id: generateId('msg'),
+            from: 'ea',
+            fromName: 'ARIA',
+            content: partialText,
+            timestamp: Date.now(),
+            type: 'ea-message'
+          };
+          const wrap = document.createElement('div');
+          wrap.setAttribute('data-streaming', 'true');
+          wrap.innerHTML = bubbleHTML(streamMsg);
+          streamBubble = wrap.firstElementChild;
+          messagesEl.appendChild(streamBubble);
+        } else {
+          const textEl = streamBubble.querySelector('.bubble-text');
+          if (textEl) textEl.innerHTML = renderMarkdown(partialText);
+        }
 
-    const result = await ea.processMessage(text);
+        if (done) {
+          streamBubble?.removeAttribute('data-streaming');
+          typingEl.classList.remove('visible');
+        }
+        scrollToBottom();
+      }
+    });
     typingEl.classList.remove('visible');
 
     const replyFrom = result.overrideSender?.id || 'ea';
     const replyFromName = result.overrideSender?.name || 'ARIA';
     const replyType = result.type || 'ea-message';
 
+    streamBubble?.remove();
     const replyMsg = { id: generateId('msg'), from: replyFrom, fromName: replyFromName, content: result.response, timestamp: Date.now(), type: replyType };
     store.dispatch({ type: 'ADD_MESSAGE', payload: replyMsg });
     messagesEl.insertAdjacentHTML('beforeend', bubbleHTML(replyMsg));

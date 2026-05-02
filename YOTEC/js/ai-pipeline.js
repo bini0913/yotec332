@@ -31,8 +31,10 @@ export function routeTask(intent, mode) {
 
 export function buildContextPayload(state, mode) {
   const recent = state.chatHistory.slice(-6).map(m => ({ from: m.fromName, text: m.content }));
+  const userProfile = state.userProfile || {};
   return {
-    user_level: mode === 'tutor' ? 'student' : 'builder',
+    user_level: userProfile.level || (mode === 'tutor' ? 'student' : 'builder'),
+    weak_areas: userProfile.weaknesses || [],
     goal: mode === 'tutor' ? 'learn fast' : 'ship quality output',
     history: recent,
     mode
@@ -41,10 +43,20 @@ export function buildContextPayload(state, mode) {
 
 export function buildPrompt(mode, input, context, intent) {
   const modePrompt = MODE_PROMPTS[mode] || MODE_PROMPTS.strategy;
-  return `${modePrompt}\n\n[CONTEXT]\n${JSON.stringify(context)}\n[/CONTEXT]\n\n[INTENT]\n${intent}\n[/INTENT]\n\n[USER INPUT]\n${input}`;
+
+  const modeInstructions = {
+    tutor: `Task:\n1) Explain simply at the user's level\n2) Give one concrete example\n3) End with one follow-up check question`,
+    developer: `Rules:\n- Write clean, working code\n- No pseudo-code\n- Include edge cases\n- Provide usage notes`,
+    strategy: `Task:\n- Clarify the core business goal\n- Recommend an actionable strategy\n- Provide practical next steps and KPIs`
+  };
+
+  return `${modePrompt}\n\n${modeInstructions[mode] || modeInstructions.strategy}\n\n[CONTEXT]\n${JSON.stringify(context)}\n[/CONTEXT]\n\n[INTENT]\n${intent}\n[/INTENT]\n\n[USER INPUT]\n${input}`;
 }
 
 export function formatResponse(mode, worker, content) {
   const badge = mode === 'tutor' ? '🎓 Tutor' : mode === 'developer' ? '💻 Dev' : '📈 Strategy';
-  return `${badge} · ${worker}\n\n${content}`;
+  let enhanced = content;
+  if (mode === 'tutor') enhanced += '\n\n👉 Your turn: answer the question above.';
+  if (mode === 'strategy') enhanced += '\n\n👉 Want me to break this into a step-by-step execution plan?';
+  return `${badge} · ${worker}\n\n${enhanced}`;
 }

@@ -63,7 +63,7 @@ export class ExecutiveAssistant {
         this.name = COMPANY.ea.name;
     }
 
-    async processMessage(userMessage) {
+    async processMessage(userMessage, options = {}) {
         const state = store.state;
         const settings = state.apiSettings || { provider: 'gemini', apiKey: 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk' };
         const mode = state.aiMode || 'strategy';
@@ -75,7 +75,17 @@ export class ExecutiveAssistant {
             const context = buildContextPayload(state, mode);
             const prompt = buildPrompt(mode, userMessage, context, intentResult.intent);
             try {
-                const raw = await AIEngineAPI.generateText(prompt, 'Respond with clear, practical output.', settings);
+                const systemPrompt = 'Respond with clear, practical output.';
+                let raw = '';
+                if (options.onChunk) {
+                    for await (const chunk of AIEngineAPI.generateTextStream(prompt, systemPrompt, settings)) {
+                        raw += chunk;
+                        options.onChunk(formatResponse(mode, worker, raw), false);
+                    }
+                    options.onChunk(formatResponse(mode, worker, raw), true);
+                } else {
+                    raw = await AIEngineAPI.generateText(prompt, systemPrompt, settings);
+                }
                 return { response: formatResponse(mode, worker, raw), type: 'ea-message', action: null };
             } catch (e) {
                 console.error('Pipeline response failed, falling back to ARIA routing.', e);
