@@ -5,6 +5,7 @@
 import { COMPANY, DEPARTMENTS, QA_AI, RESPONSE_TEMPLATES } from './data.js';
 import { store, generateId } from './state.js';
 import { ExecutionEngine, AIEngineAPI } from './execution-engine.js';
+import { analyzeIntent, routeTask, buildContextPayload, buildPrompt, formatResponse } from './ai-pipeline.js';
 
 // ---- Utility helpers ----
 function pickRandom(arr) {
@@ -64,7 +65,22 @@ export class ExecutiveAssistant {
 
     async processMessage(userMessage) {
         const state = store.state;
-        const settings = state.apiSettings || { provider: 'pollinations', apiKey: '' };
+        const settings = state.apiSettings || { provider: 'gemini', apiKey: 'AIzaSyD_aiIfFvdQ2WA-vmC6_6J3kGDZ5b1HrDk' };
+        const mode = state.aiMode || 'strategy';
+
+        // Mode-first smart pipeline for direct conversational intelligence
+        if (mode === 'tutor' || mode === 'developer' || mode === 'strategy') {
+            const intentResult = analyzeIntent(userMessage);
+            const worker = routeTask(intentResult.intent, mode);
+            const context = buildContextPayload(state, mode);
+            const prompt = buildPrompt(mode, userMessage, context, intentResult.intent);
+            try {
+                const raw = await AIEngineAPI.generateText(prompt, 'Respond with clear, practical output.', settings);
+                return { response: formatResponse(mode, worker, raw), type: 'ea-message', action: null };
+            } catch (e) {
+                console.error('Pipeline response failed, falling back to ARIA routing.', e);
+            }
+        }
         
         // 1. Check for direct worker mentions
         const mentionedWorker = this._detectMention(userMessage);
